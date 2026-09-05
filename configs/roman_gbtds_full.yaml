@@ -1,0 +1,98 @@
+# lenseff production configuration -- Roman GBTDS.
+#
+# 31 x 41 cells x 100 events x 24 angles = 3,050,400 injections, plus 20,000
+# zero-q controls.  Do NOT launch this before the Phase 3 timing measurement:
+# at 50 ms per injection-recovery cycle this is ~42 CPU-hours; at 500 ms it is
+# ~420.  See docs/compute-budget.md.
+run:
+  name: roman_gbtds_full
+  seed: 20260905
+  output_dir: results/roman_gbtds_full
+  overwrite: false
+survey:
+  preset: roman_gbtds
+  precision_scale: 1.0
+  dropout_fraction: 0.0
+events:
+  source: population
+  n_events: 100
+  require_peak_in_season: true
+  min_baseline_points: 200
+  distributions:
+    u_0:
+      dist: uniform
+      min: 0.0
+      max: 1.0
+    t_E:
+      dist: lognormal
+      median: 25.0
+      sigma_ln: 0.6
+      truncate_min: 1.0
+      truncate_max: 300.0
+    source_mag:
+      dist: uniform
+      min: 20.0
+      max: 23.0
+    blend_ratio:
+      dist: uniform
+      min: 0.0
+      max: 1.0
+    rho:
+      dist: loguniform
+      min: 0.0003
+      max: 0.003
+injection:
+  grid:
+    log_q:
+      min: -5.0
+      max: -2.0
+      n: 31
+    log_s:
+      min: -0.6
+      max: 0.6
+      n: 41
+    n_alpha: 24
+    alpha_mode: stratified
+    events_per_cell: 0
+  finite_source: true
+  magnification_methods: VBBL
+  default_method: point_source_point_lens
+  method_window_t_E: 1.0
+  include_zero_q_control: true
+  n_zero_q_trials: 20000
+detection:
+  delta_chi2_min: 160.0
+  consecutive_points: 3
+  point_sigma: 3.0
+  require_same_sign: true
+  require_in_season: true
+  max_gap_within_run_days: 0.25
+  min_points_in_anomaly: 1
+  refit:
+    n_starts: 12
+    method: Nelder-Mead
+    max_iterations: 5000
+    tolerance: 1.0e-06
+    free_blending: true
+    t_0_jitter_t_E: 0.3
+    t_E_factors:
+    - 0.7
+    - 1.0
+    - 1.4
+    u_0_factors:
+    - 0.6
+    - 1.0
+    - 1.6
+    mask_anomaly_start: true
+compute:
+  n_workers: 0
+  chunk_size: 64
+  checkpoint_every: 20000
+  resume: true
+  max_records_in_memory: 200000
+output:
+  compression: snappy
+  write_injections: true
+  write_efficiency: true
+  write_plots: true
+  confidence_level: 0.6827
