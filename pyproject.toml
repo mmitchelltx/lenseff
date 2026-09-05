@@ -48,7 +48,10 @@ packages = ["lenseff"]
 [tool.ruff]
 line-length = 100
 target-version = "py311"
-src = ["lenseff", "tests"]
+src = ["."]  # so `lenseff` is recognised as first-party by isort
+
+[tool.ruff.lint.isort]
+known-first-party = ["lenseff"]
 
 [tool.ruff.lint]
 select = [
@@ -76,13 +79,14 @@ ignore = [
   "N803",    # scientific parameter names (u_0, t_E) are not snake_case-pure
   "N806",
   "N815",
+  "N813",    # `import MulensModel as mm` is the library's own convention
 ]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["D100", "D101", "D102", "D103", "D104", "ANN001", "ANN201", "ANN202"]
+"tests/*" = ["D100", "D101", "D102", "D103", "D104", "ANN001", "ANN201", "ANN202", "ARG001", "N817"]
 
 [tool.pytest.ini_options]
 minversion = "8.0"

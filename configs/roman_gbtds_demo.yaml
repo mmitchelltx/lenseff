@@ -26,7 +26,8 @@ events:
   source: population
   n_events: 8               # baseline PSPL events shared across the grid
   require_peak_in_season: true
-  min_baseline_points: 200
+  peak_window_t_E: 2.0
+  min_points_near_peak: 200
   distributions:
     # t_0 is omitted: the default is uniform over the union of season windows,
     # which is the right prior once require_peak_in_season is set.

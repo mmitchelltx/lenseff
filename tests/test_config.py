@@ -8,6 +8,7 @@ import json
 import numpy as np
 import pytest
 import yaml
+
 from lenseff.config import AxisSpec, Config, ConfigError
 
 

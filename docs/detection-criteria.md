@@ -76,43 +76,69 @@ season structure a first-class, testable part of the pipeline — one of the six
 validation tests places the anomaly in a gap and requires exactly zero
 recovery.
 
-## Open questions for Phase 3
+## Decisions (settled 2026-09-05)
 
-**(a) How is χ²(binary) evaluated — at the injected parameters, or fitted?**
+### (a) χ²(binary) is evaluated at the injected parameters
 
-This changes what the statistic means and it changes the answer to the first
-validation test.
+`Δχ² = χ²(free PSPL refit) − χ²(binary at the injected q, s, α, ρ, with f_s and
+f_b refit linearly)`. This is the standard injection-recovery formulation and
+it costs one binary-model evaluation per injection instead of a full planet
+search. The alternative — fitting (q, s, α) — buys a genuine false-alarm rate
+at 10–100× the compute, which would put a production Roman grid out of reach
+of the hardware this package targets.
 
-* *Injected parameters* (the usual choice in efficiency work, and the cheap
-  one): Δχ² measures how much of a *known* signal a single-lens model cannot
-  absorb. At `q = 0` the binary model is exactly the injected PSPL model, the
-  refit can only do better than the truth, so Δχ² ≤ 0 identically and the
-  false-positive rate from the Δχ² criterion is **zero by construction**. The
-  consecutive-points criterion still has a non-zero rate, since noise can
-  produce three consecutive 3σ residuals.
-* *Fitted* (a planet *search*, seeded at or around the injected parameters, or
-  over a grid of planet models): the statistic acquires the extra freedom that
-  makes a genuine, measurable false-alarm rate — and costs one to two orders
-  of magnitude more compute per injection.
+**Consequence, and it is a feature, not a gap.** At `q = 0` the binary model
+*is* the injected PSPL model, and the free refit can only fit at least as well
+as the truth, so
 
-The stated validation test "`q = 0` yields efficiency consistent with the
-false-positive rate implied by the χ² threshold, not zero and not something
-large" only has a non-trivial answer under the second formulation, or if the
-`q = 0` control is scored on the consecutive-points criterion alone. **Decide
-this before Phase 3 is written**, because it sets the compute budget for the
-whole project.
+```
+Δχ² ≤ 0    identically, for every planet-free injection
+```
 
-**(b) Should the refit be allowed higher-order single-lens terms?**
-Microlensing parallax and lens orbital motion can mimic or absorb long
-anomalies. Including parallax in the refit is more conservative and more
-expensive. Recommend: not in v1, but record the decision.
+The Δχ² criterion therefore has a false-positive rate of exactly zero *by
+construction*. That is a sharper, checkable statement than "some small rate",
+and the validation suite asserts the inequality directly on every `q = 0`
+control rather than estimating a rate that is not there.
 
-**(c) Error-bar renormalisation.** Real pipelines rescale uncertainties so
-that the single-lens fit gives χ²/dof = 1, which directly rescales Δχ². With
-simulated Gaussian noise this is a no-op; with a supplied catalog it is not.
+The false-positive rate that genuinely exists belongs to criterion 2, the run
+of consecutive deviant points, which noise *can* produce. For independent
+Gaussian residuals with per-point threshold `k` sigma and a required run of `r`
+same-sign points, the expected number of runs in `N` points is
 
-**(d) Is Δχ² the right statistic at all, or should the criteria be evaluated
-on a per-anomaly basis** (Δχ² restricted to the anomaly window)? The windowed
-statistic is less sensitive to baseline systematics and is what some
-ground-based analyses use. Both can be recorded per injection at negligible
-extra cost, which is the recommended hedge.
+```
+E[runs] ≈ 2 (N − r + 1) p^r (1 − p),    p = Φ(−k)
+```
+
+which for the defaults (`k = 3`, `r = 3`) and Roman's ~5 × 10⁴ points per
+light curve gives ~2 × 10⁻⁴ per event. The validation suite checks the
+measured rate against this closed form at high statistics on synthetic noise,
+where the rate is actually measurable, instead of on a few hundred light
+curves where it is not.
+
+So the original validation requirement splits into two stronger tests:
+
+1. `Δχ² ≤ 0` for every planet-free injection (exact, not statistical), and the
+   combined criteria fire on essentially none of them.
+2. The consecutive-points false-alarm rate matches the run-statistics
+   prediction to within Poisson error.
+
+### (b) No parallax or lens orbital motion in the refit for v1
+
+Including microlensing parallax in the PSPL refit is more conservative — it
+gives the single-lens model more freedom to absorb long anomalies — and
+roughly triples the refit cost. Recorded as a known limitation: efficiency for
+anomalies with timescales approaching `t_E` is an upper bound.
+
+### (c) Error bars are not renormalised
+
+The simulated noise is Gaussian by construction with known σ, so rescaling to
+χ²/dof = 1 is a no-op. When events come from a supplied catalog the user is
+responsible for the uncertainties they hand in. Revisit if catalog mode is
+used on real photometry.
+
+### (d) Both the global and the windowed Δχ² are recorded
+
+Every injection stores `delta_chi2` (all points) and `delta_chi2_window`
+(points inside the anomaly window). The windowed statistic is less sensitive
+to baseline systematics; storing both costs nothing and lets the surface be
+re-thresholded on either without recomputing the grid.

@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import pyarrow.parquet as pq
 import pytest
+
 from lenseff.config import Config
 from lenseff.provenance import (
     METADATA_KEY,

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
+
 from lenseff.rng import STREAM_IDS, generator, stream_key
 
 

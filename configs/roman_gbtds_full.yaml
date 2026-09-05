@@ -17,7 +17,8 @@ events:
   source: population
   n_events: 100
   require_peak_in_season: true
-  min_baseline_points: 200
+  peak_window_t_E: 2.0
+  min_points_near_peak: 200
   distributions:
     u_0:
       dist: uniform

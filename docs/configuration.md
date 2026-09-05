@@ -71,7 +71,8 @@ has the right shape without hard-coding one survey's numbers.
 | `n_events` | int ≥ 1 | *required* | baseline PSPL events in the sample |
 | `catalog_path` | path | `null` | required when `source: catalog` |
 | `require_peak_in_season` | bool | `true` | reject events peaking in a gap |
-| `min_baseline_points` | int ≥ 0 | `100` | reject sparsely covered events |
+| `peak_window_t_E` | float > 0 | `2.0` | half-width of the coverage window, in t_E |
+| `min_points_near_peak` | int ≥ 0 | `100` | reject events with fewer usable points in that window |
 
 ### `events.distributions`
 

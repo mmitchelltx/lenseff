@@ -6,8 +6,11 @@ import copy
 from pathlib import Path
 from typing import Any
 
+import matplotlib
 import pytest
 import yaml
+
+matplotlib.use("Agg")
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEMO_CONFIG = REPO_ROOT / "configs" / "roman_gbtds_demo.yaml"

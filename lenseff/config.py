@@ -532,7 +532,10 @@ class EventsConfig:
         catalog_path: Path to a parquet/CSV catalog (catalog mode).
         require_peak_in_season: Reject drawn events whose peak falls in a
             season gap.
-        min_baseline_points: Reject events with fewer usable measurements.
+        peak_window_t_E: Half-width, in Einstein times, of the window around
+            ``t_0`` used to judge whether an event is adequately covered.
+        min_points_near_peak: Reject events with fewer than this many usable
+            (unsaturated, in-season) measurements inside that window.
         distributions: Per-parameter sampling specs, keyed by parameter name
             (``t_0``, ``u_0``, ``t_E``, ``source_mag``, ``blend_ratio``,
             ``rho``).
@@ -542,7 +545,8 @@ class EventsConfig:
     n_events: int
     catalog_path: Path | None
     require_peak_in_season: bool
-    min_baseline_points: int
+    peak_window_t_E: float
+    min_points_near_peak: int
     distributions: dict[str, DistributionSpec] = field(default_factory=dict)
 
     @classmethod
@@ -553,7 +557,8 @@ class EventsConfig:
         raw_catalog = r.get_raw("catalog_path", None)
         catalog_path = None if raw_catalog is None else Path(str(raw_catalog))
         require_peak = r.get_bool("require_peak_in_season", True)
-        min_points = r.get_int("min_baseline_points", 100, ge=0)
+        peak_window = r.get_float("peak_window_t_E", 2.0, gt=0.0)
+        min_points = r.get_int("min_points_near_peak", 100, ge=0)
         dists: dict[str, DistributionSpec] = {}
         if source == "population":
             dist_reader = r.require_section("distributions")
@@ -573,7 +578,8 @@ class EventsConfig:
             n_events=n_events,
             catalog_path=catalog_path,
             require_peak_in_season=require_peak,
-            min_baseline_points=min_points,
+            peak_window_t_E=peak_window,
+            min_points_near_peak=min_points,
             distributions=dists,
         )
 
