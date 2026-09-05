@@ -99,7 +99,7 @@ detection:
 compute:
   n_workers: 0
   start_method: auto
-  chunk_size: 64
+  chunk_size: 4              # tasks per dispatch; a task is one (event, cell)
   checkpoint_every: 20000
   resume: true
   max_records_in_memory: 200000

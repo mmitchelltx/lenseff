@@ -155,7 +155,7 @@ package exists to avoid, so the refit is deliberately over-provisioned.
 | --- | --- | --- | --- |
 | `n_workers` | int ≥ 0 | `0` | `0` = one per CPU |
 | `start_method` | `auto` \| `fork` \| `spawn` \| `forkserver` | `auto` | `auto` prefers `fork`; `spawn` re-imports the entry point in every worker |
-| `chunk_size` | int ≥ 1 | `64` | injections dispatched per task |
+| `chunk_size` | int ≥ 1 | `4` | tasks dispatched per work item; a task is one (event, cell) pair |
 | `checkpoint_every` | int ≥ 1 | `5000` | injections between checkpoint flushes |
 | `resume` | bool | `true` | resume an interrupted run |
 | `max_records_in_memory` | int ≥ 1 | `200000` | bounds memory on 10⁶-injection grids |

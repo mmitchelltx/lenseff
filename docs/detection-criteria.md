@@ -57,6 +57,32 @@ Applied to the residuals **from the PSPL refit**, not from the injected model.
   the cadence. At Roman's cadence this is a weak requirement; at ground-based
   cadence it is a strong one, which is why it is configurable.
 
+### What it actually rejects, measured
+
+This criterion is not decorative. Two concrete cases from the test suite:
+
+**A diffuse deviation that passes the chi-square threshold.** A configuration
+approximating OGLE-2005-BLG-390Lb (`q = 7.6e-5`, `s = 1.61`) at a trajectory
+angle that *misses* the planetary caustic still accumulates `Δχ² = 615` — well
+above 160 — from 349 points each deviating by about 1σ over three days. No
+single point reaches 3σ. In real photometry a 1σ trend lasting three days is
+indistinguishable from correlated noise, and the run criterion is the only
+thing that rejects it. (`test_a_diffuse_low_amplitude_deviation_is_rejected`)
+
+**In the demo run, it is the binding criterion.** At `q = 1e-2`, 58% of
+injections pass the Δχ² threshold but only 36% pass the run requirement, and
+the split is clean:
+
+| Δχ² | injections | median run length | detected |
+| --- | ---: | ---: | ---: |
+| 160 – 1,000 | 90 | 1 | 1% |
+| 1,000 – 10,000 | 88 | 3 | 55% |
+| > 10,000 | 159 | 244 | 100% |
+
+Everything in the first row is chi-square accumulated thinly across thousands
+of points; everything in the last is a resolved anomaly. The criterion
+separates them almost perfectly.
+
 Two supporting knobs:
 
 * `require_same_sign` (default true): the run must be all-positive or

@@ -15,11 +15,18 @@ whole `(q, s)` grid, Python 3.11 / MulensModel 3.11.
 
 | config | injections | CPU-hours | 4 cores | 8 cores | 64 cores |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| `roman_gbtds_demo.yaml` | 2,752 | 0.13 | 1.9 min | 1.0 min | — |
+| `roman_gbtds_demo.yaml` | 5,384 | 0.25 | 3.7 min | 1.9 min | — |
 | `roman_gbtds_full.yaml` | 3,070,400 | 141 | 35 h | 18 h | 2.2 h |
 
-The demo config has roughly a factor of five of headroom against its ten-minute
-target on a laptop, which is where the grid resolution should be spent.
+The demo grid was sized against this table after it was measured, not before:
+the original 7x7x6 grid used only a fifth of the ten-minute laptop budget, so
+the resolution was raised to 9x9x8 and the headroom spent where it shows.
+
+**Measured end to end**, `lenseff run configs/roman_gbtds_demo.yaml` on four
+cores: **6m00s** wall, 22m32s CPU, 15.1 injections/s. That is the sweep plus
+aggregation plus both figures. The gap between 0.25 CPU-hours predicted and
+0.37 measured is worker startup and this container's shared cores; budget
+accordingly.
 
 The production config is a real but tractable overnight run on a workstation,
 or a couple of hours on a cluster node. **Check this table against your own

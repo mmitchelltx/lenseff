@@ -107,7 +107,7 @@ detection:
 compute:
   n_workers: 0                # 0 == one per CPU
   start_method: auto          # 'fork' where available; see docs/configuration.md
-  chunk_size: 64
+  chunk_size: 4              # tasks per dispatch; a task is one (event, cell)
   checkpoint_every: 2000
   resume: true
   max_records_in_memory: 200000

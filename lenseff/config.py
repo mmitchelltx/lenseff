@@ -913,7 +913,10 @@ class ComputeConfig:
             where the platform provides it, because ``spawn`` re-imports the
             parent's ``__main__`` module in every worker, which is both slow
             and impossible when the entry point is not an importable file.
-        chunk_size: Injections dispatched to a worker at a time.
+        chunk_size: Tasks dispatched to a worker at a time.  A task is
+            already every trajectory angle for one (event, cell) pair, so this
+            should stay small: a large value starves the progress report and
+            the checkpoint writer without improving throughput.
         checkpoint_every: Injections between checkpoint flushes.
         resume: Whether an interrupted run may resume from checkpoints.
         max_records_in_memory: Cap on buffered per-injection records, which
@@ -935,7 +938,7 @@ class ComputeConfig:
             start_method=r.get_str(
                 "start_method", "auto", choices=("auto", "fork", "spawn", "forkserver")
             ),
-            chunk_size=r.get_int("chunk_size", 64, ge=1),
+            chunk_size=r.get_int("chunk_size", 4, ge=1),
             checkpoint_every=r.get_int("checkpoint_every", 5000, ge=1),
             resume=r.get_bool("resume", True),
             max_records_in_memory=r.get_int("max_records_in_memory", 200_000, ge=1),
