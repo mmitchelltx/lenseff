@@ -850,7 +850,11 @@ class DetectionConfig:
         max_gap_within_run_days: Two points count as consecutive only if they
             are closer together than this; prevents a "run" straddling a gap.
         min_points_in_anomaly: Minimum number of measurements inside the
-            anomaly window for the injection to be scored at all.
+            anomaly window for the injection to count as a detection.
+        min_points_to_fit: Below this many measurements in the analysis window
+            the PSPL refit is not attempted at all and the injection is scored
+            as undetected.  This happens when an event falls in a long season
+            gap, where there is genuinely nothing to fit.
     """
 
     delta_chi2_min: float
@@ -860,6 +864,7 @@ class DetectionConfig:
     require_in_season: bool
     max_gap_within_run_days: float
     min_points_in_anomaly: int
+    min_points_to_fit: int
     refit: RefitConfig
 
     @classmethod
@@ -872,6 +877,7 @@ class DetectionConfig:
         in_season = r.get_bool("require_in_season", True)
         max_gap = r.get_float("max_gap_within_run_days", 0.25, gt=0.0)
         min_in_anomaly = r.get_int("min_points_in_anomaly", 1, ge=0)
+        min_to_fit = r.get_int("min_points_to_fit", 20, ge=6)
         refit_reader = r.get_section("refit", required=False)
         r.done()
         refit = (
@@ -887,6 +893,7 @@ class DetectionConfig:
             require_in_season=in_season,
             max_gap_within_run_days=max_gap,
             min_points_in_anomaly=min_in_anomaly,
+            min_points_to_fit=min_to_fit,
             refit=refit,
         )
 
@@ -902,6 +909,10 @@ class ComputeConfig:
 
     Attributes:
         n_workers: Worker processes; ``0`` means "one per CPU".
+        start_method: Multiprocessing start method.  ``auto`` prefers ``fork``
+            where the platform provides it, because ``spawn`` re-imports the
+            parent's ``__main__`` module in every worker, which is both slow
+            and impossible when the entry point is not an importable file.
         chunk_size: Injections dispatched to a worker at a time.
         checkpoint_every: Injections between checkpoint flushes.
         resume: Whether an interrupted run may resume from checkpoints.
@@ -910,6 +921,7 @@ class ComputeConfig:
     """
 
     n_workers: int
+    start_method: str
     chunk_size: int
     checkpoint_every: int
     resume: bool
@@ -920,6 +932,9 @@ class ComputeConfig:
         """Parse a ``compute`` section."""
         cfg = cls(
             n_workers=r.get_int("n_workers", 0, ge=0),
+            start_method=r.get_str(
+                "start_method", "auto", choices=("auto", "fork", "spawn", "forkserver")
+            ),
             chunk_size=r.get_int("chunk_size", 64, ge=1),
             checkpoint_every=r.get_int("checkpoint_every", 5000, ge=1),
             resume=r.get_bool("resume", True),
@@ -939,6 +954,10 @@ class OutputConfig:
         write_efficiency: Write the aggregated efficiency surface.
         write_plots: Render contour maps and diagnostics.
         confidence_level: Coverage of the Wilson-score interval per cell.
+        colormap: Matplotlib colormap for the efficiency surface.  The default
+            is perceptually uniform and colour-vision-deficiency safe;
+            rainbow-like maps invent structure that is not in the data and
+            must not be used for a published surface.
     """
 
     compression: str
@@ -946,6 +965,7 @@ class OutputConfig:
     write_efficiency: bool
     write_plots: bool
     confidence_level: float
+    colormap: str
 
     @classmethod
     def from_reader(cls, r: _Reader) -> OutputConfig:
@@ -958,6 +978,7 @@ class OutputConfig:
             write_efficiency=r.get_bool("write_efficiency", True),
             write_plots=r.get_bool("write_plots", True),
             confidence_level=r.get_float("confidence_level", 0.6827, gt=0.0, lt=1.0),
+            colormap=r.get_str("colormap", "viridis"),
         )
         r.done()
         return cfg
@@ -1056,7 +1077,7 @@ class Config:
     def to_dict(self) -> dict[str, Any]:
         """Return the resolved configuration as plain JSON-compatible data.
 
-        ``source_path`` is deliberately omitted: the hash must depend on the
+        ``source_path`` is deliberately omitted: the record must depend on the
         content of the configuration, not on where the file lives.
         """
         return {
@@ -1064,9 +1085,25 @@ class Config:
             for name in ("run", "survey", "events", "injection", "detection", "compute", "output")
         }
 
+    def hashable_dict(self) -> dict[str, Any]:
+        """Return the part of the configuration that can change the numbers.
+
+        ``compute`` is excluded.  Worker count, chunk size, checkpoint
+        interval and start method are scheduling choices; by construction they
+        cannot move a single value in the output, because every random draw is
+        addressed rather than sequential.  Excluding them means the config
+        hash identifies the *science* of a run, so a checkpointed sweep can be
+        resumed on a different machine with a different core count -- which is
+        exactly when resuming matters.  The full configuration, ``compute``
+        included, is still written into the provenance record.
+        """
+        return {name: value for name, value in self.to_dict().items() if name != "compute"}
+
     def canonical_json(self) -> str:
         """Return a canonical, key-sorted JSON serialisation of the config."""
-        return json.dumps(self.to_dict(), sort_keys=True, separators=(",", ":"), allow_nan=False)
+        return json.dumps(
+            self.hashable_dict(), sort_keys=True, separators=(",", ":"), allow_nan=False
+        )
 
     def config_hash(self) -> str:
         """Return the SHA-256 hash of :meth:`canonical_json`."""

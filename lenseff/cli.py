@@ -8,6 +8,7 @@ Phase 0 implements the configuration-facing commands (``validate`` and
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import json
 import sys
 from collections.abc import Sequence
@@ -56,6 +57,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_run = sub.add_parser("run", help="run an injection-recovery sweep")
     p_run.add_argument("config", help="path to a YAML configuration file")
+    p_run.add_argument("--quiet", action="store_true", help="suppress progress reporting")
+    p_run.add_argument("--workers", type=int, default=None, help="override compute.n_workers")
     return parser
 
 
@@ -115,6 +118,66 @@ def _lightcurve(args: argparse.Namespace) -> int:
     return 0
 
 
+def _run(args: argparse.Namespace) -> int:
+    """Execute the sweep, aggregate it, and write the figures."""
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    from lenseff.efficiency import aggregate, control_summary, load_injections, write_efficiency
+    from lenseff.grid import run_grid
+    from lenseff.plotting import plot_efficiency_map, plot_efficiency_slices
+
+    config = _load(args.config)
+    if args.workers is not None:
+        config = dataclasses.replace(
+            config, compute=dataclasses.replace(config.compute, n_workers=args.workers)
+        )
+    output_dir = run_grid(config, progress=not args.quiet)
+
+    records = load_injections(output_dir)
+    surface = aggregate(records, config)
+    if config.output.write_efficiency:
+        print(f"  wrote {write_efficiency(surface, config)}")
+
+    if config.output.write_plots:
+        figures = Path(output_dir) / "figures"
+        figures.mkdir(parents=True, exist_ok=True)
+        for name, builder in (
+            ("efficiency_map", plot_efficiency_map),
+            ("efficiency_slices", plot_efficiency_slices),
+        ):
+            figure = builder(surface, config)
+            path = figures / f"{name}.png"
+            figure.savefig(path, dpi=150)
+            plt.close(figure)
+            print(f"  wrote {path}")
+
+    controls = control_summary(records, config)
+    print(f"\n{config.run.name} [{config.short_hash()}]")
+    print(f"  injections      : {len(records):,}")
+    print(f"  grid cells      : {len(surface)}")
+    if len(surface):
+        print(
+            f"  efficiency      : {surface['efficiency'].min():.3f} - "
+            f"{surface['efficiency'].max():.3f} "
+            f"(mean {surface['efficiency'].mean():.3f})"
+        )
+    if controls.get("n_controls"):
+        print(
+            f"  controls        : {controls['n_false_positives']}/{controls['n_controls']} "
+            f"false positives, rate {controls['false_positive_rate']:.4f} "
+            f"[{controls['false_positive_low']:.4f}, {controls['false_positive_high']:.4f}]"
+        )
+        print(
+            f"  max control dchi2: {controls['max_delta_chi2']:+.4g} "
+            f"({controls['max_delta_chi2_relative']:+.1e} relative; must be <= 0 "
+            f"up to float64 rounding)"
+        )
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Run the CLI.
 
@@ -154,13 +217,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _lightcurve(args)
 
     if args.command == "run":
-        config = _load(args.config)
-        print(
-            f"error: 'lenseff run' is not implemented yet (Phase 6). "
-            f"The configuration is valid: {config.short_hash()}",
-            file=sys.stderr,
-        )
-        return 1
+        return _run(args)
 
     raise AssertionError(f"unhandled command {args.command!r}")  # pragma: no cover
 

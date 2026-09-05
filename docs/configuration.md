@@ -128,6 +128,7 @@ See [`detection-criteria.md`](detection-criteria.md).
 | `require_in_season` | bool | `true` |
 | `max_gap_within_run_days` | float > 0 | `0.25` |
 | `min_points_in_anomaly` | int ≥ 0 | `1` |
+| `min_points_to_fit` | int ≥ 6 | `20` |
 
 ### `detection.refit`
 
@@ -153,6 +154,7 @@ package exists to avoid, so the refit is deliberately over-provisioned.
 | key | type | default | meaning |
 | --- | --- | --- | --- |
 | `n_workers` | int ≥ 0 | `0` | `0` = one per CPU |
+| `start_method` | `auto` \| `fork` \| `spawn` \| `forkserver` | `auto` | `auto` prefers `fork`; `spawn` re-imports the entry point in every worker |
 | `chunk_size` | int ≥ 1 | `64` | injections dispatched per task |
 | `checkpoint_every` | int ≥ 1 | `5000` | injections between checkpoint flushes |
 | `resume` | bool | `true` | resume an interrupted run |
@@ -167,3 +169,4 @@ package exists to avoid, so the refit is deliberately over-provisioned.
 | `write_efficiency` | bool | `true` |
 | `write_plots` | bool | `true` |
 | `confidence_level` | float ∈ (0,1) | `0.6827` |
+| `colormap` | str | `viridis` | perceptually uniform and CVD-safe; never a rainbow map |

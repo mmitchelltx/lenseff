@@ -54,6 +54,22 @@ def test_config_hash_changes_with_any_value(demo_dict):
     assert Config.from_dict(demo_dict).config_hash() != base
 
 
+def test_scheduling_choices_do_not_change_the_hash(demo_dict):
+    """Resuming a checkpointed run on a different machine must be allowed."""
+    base = Config.from_dict(demo_dict).config_hash()
+    for key, value in (
+        ("n_workers", 17),
+        ("chunk_size", 3),
+        ("checkpoint_every", 11),
+        ("start_method", "spawn"),
+        ("max_records_in_memory", 42),
+    ):
+        demo_dict["compute"][key] = value
+        assert Config.from_dict(demo_dict).config_hash() == base
+    # but compute settings are still recorded in full
+    assert Config.from_dict(demo_dict).to_dict()["compute"]["n_workers"] == 17
+
+
 def test_canonical_json_is_sorted_and_finite(demo_config_path):
     text = Config.from_yaml(demo_config_path).canonical_json()
     parsed = json.loads(text)
@@ -181,15 +197,15 @@ def test_axis_requires_max_above_min_when_n_gt_1(demo_dict):
 def test_injection_count_arithmetic(demo_config_path):
     config = Config.from_yaml(demo_config_path)
     grid = config.injection.grid
-    assert grid.n_cells == 49
-    expected = 49 * config.events.n_events * grid.n_alpha + config.injection.n_zero_q_trials
-    assert config.n_injections() == expected == 2752
+    assert grid.n_cells == 81
+    expected = 81 * config.events.n_events * grid.n_alpha + config.injection.n_zero_q_trials
+    assert config.n_injections() == expected == 5384
 
 
 def test_events_per_cell_overrides_the_sample_size(demo_dict):
     demo_dict["injection"]["grid"]["events_per_cell"] = 3
     demo_dict["injection"]["include_zero_q_control"] = False
-    assert Config.from_dict(demo_dict).n_injections() == 49 * 3 * 6
+    assert Config.from_dict(demo_dict).n_injections() == 81 * 3 * 8
 
 
 def test_empty_and_invalid_yaml(tmp_path):

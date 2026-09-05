@@ -71,6 +71,7 @@ __all__ = [
     "FluxSolution",
     "PSPLFit",
     "detect",
+    "expected_run_false_alarm_rate",
     "longest_significant_run",
     "refit_pspl",
     "solve_fluxes",
@@ -395,6 +396,8 @@ def _needs_finite_source(injection: Injection, config: Config) -> float | None:
         return None
     event = injection.event
     light_curve = injection.light_curve
+    if light_curve.n_points == 0:
+        return None
     point = pspl_magnification(event, light_curve.times, finite_source=False)
     finite = injection.pspl_magnification
     difference = np.abs(finite - point) * light_curve.f_source / light_curve.flux_err
@@ -598,6 +601,8 @@ def detect(injection: Injection, survey: Survey, config: Config) -> DetectionRes
     """
     detection = config.detection
     light_curve = injection.light_curve
+    if light_curve.n_points < detection.min_points_to_fit:
+        return _unscored()
 
     fit = refit_pspl(injection, config)
     binary = solve_fluxes(
@@ -637,6 +642,7 @@ def detect(injection: Injection, survey: Survey, config: Config) -> DetectionRes
 
     n_in_anomaly = int(in_window.sum())
     criteria = {
+        "fittable": True,
         "delta_chi2": delta_chi2 >= detection.delta_chi2_min,
         "consecutive_points": run_length >= detection.consecutive_points,
         "points_in_anomaly": n_in_anomaly >= detection.min_points_in_anomaly,
@@ -659,9 +665,91 @@ def detect(injection: Injection, survey: Survey, config: Config) -> DetectionRes
     )
 
 
+def _unscored() -> DetectionResult:
+    """Score an injection with too little data to fit at all.
+
+    An event whose analysis window falls inside a long season gap has nothing
+    to refit.  That is not an error and not a detection: it is a trial that
+    contributes a zero to the efficiency of its cell, which is exactly the
+    behaviour the season structure is supposed to produce.
+    """
+    criteria = {
+        "fittable": False,
+        "delta_chi2": False,
+        "consecutive_points": False,
+        "points_in_anomaly": False,
+        "in_season": False,
+    }
+    return DetectionResult(
+        delta_chi2=0.0,
+        delta_chi2_window=0.0,
+        chi2_refit=float("nan"),
+        chi2_binary=float("nan"),
+        run_length=0,
+        run_t_start=float("nan"),
+        run_t_end=float("nan"),
+        run_in_season=False,
+        n_points_in_anomaly=0,
+        fit=PSPLFit(
+            t_0=float("nan"),
+            u_0=float("nan"),
+            t_E=float("nan"),
+            f_source=float("nan"),
+            f_blend=float("nan"),
+            chi2=float("nan"),
+            n_starts=0,
+            n_refined=0,
+            converged=False,
+        ),
+        criteria=criteria,
+        detected=False,
+    )
+
+
 def _refit_magnification(injection: Injection, config: Config, fit: PSPLFit) -> np.ndarray:
     """Evaluate the fitted PSPL model at the measurement times."""
     objective = _PSPLObjective(
         injection.light_curve, config.detection.refit, _needs_finite_source(injection, config)
     )
     return objective.magnification(fit.t_0, fit.u_0, fit.t_E)
+
+
+def expected_run_false_alarm_rate(
+    n_points: int, sigma: float, run_length: int, *, same_sign: bool = True
+) -> float:
+    r"""Closed-form false-alarm probability of the consecutive-points criterion.
+
+    For independent Gaussian residuals, the expected number of maximal runs of
+    ``run_length`` or more points beyond ``sigma`` is
+
+    .. math::
+
+        E \approx m (N - r + 1) p^r (1 - p)
+
+    where ``p`` is the per-point tail probability, ``r`` the required run
+    length, and ``m = 2`` when a run must be single-signed (it may be all
+    positive or all negative).  The probability of at least one such run is
+    then ``1 - exp(-E)``.
+
+    This is the criterion's *actual* false-positive rate.  The Delta
+    chi-square criterion's is exactly zero by construction, because the refit
+    family contains the injected planet-free model, so this is the number a
+    ``q = 0`` control batch is measuring.
+
+    Args:
+        n_points: Measurements in the light curve.
+        sigma: Per-point significance threshold.
+        run_length: Number of consecutive points required.
+        same_sign: Whether the run must be single-signed.
+
+    Returns:
+        Probability that noise alone produces at least one qualifying run.
+    """
+    from scipy.stats import norm
+
+    tail = float(norm.sf(sigma))
+    multiplicity = 2.0 if same_sign else 1.0
+    per_point = tail if same_sign else 2.0 * tail
+    trials = max(n_points - run_length + 1, 0)
+    expected = multiplicity * trials * per_point**run_length * (1.0 - per_point)
+    return float(-np.expm1(-expected))

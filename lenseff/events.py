@@ -376,6 +376,7 @@ def simulate_light_curve(
     config: Config,
     *,
     add_noise: bool = True,
+    realisation: int = 0,
 ) -> LightCurve:
     """Render an event onto the survey calendar, with noise.
 
@@ -394,6 +395,9 @@ def simulate_light_curve(
             finite-source switch.
         add_noise: Set false to obtain the noiseless light curve, which is
             useful in tests and diagnostics.
+        realisation: Selects the noise draw, matching
+            :meth:`lenseff.inject.EventSetup.build` so that the two agree
+            point for point.
 
     Returns:
         The simulated light curve.
@@ -411,7 +415,7 @@ def simulate_light_curve(
     season_index = survey.season_index[keep]
     flux_err = np.asarray(survey.flux_uncertainty(model_flux))
     if add_noise:
-        rng = generator(config.run.seed, "photometric_noise", event.index)
+        rng = generator(config.run.seed, "photometric_noise", event.index, realisation)
         flux = model_flux + rng.normal(0.0, 1.0, size=model_flux.size) * flux_err
     else:
         flux = model_flux.copy()

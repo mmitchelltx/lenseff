@@ -73,6 +73,7 @@ detection:
   require_in_season: true
   max_gap_within_run_days: 0.25
   min_points_in_anomaly: 1
+  min_points_to_fit: 20     # below this the window holds no data to fit (long gap)
   refit:
     n_starts: 28              # candidate starts, screened cheaply by chi-square
     n_refine: 4               # best candidates actually handed to the optimiser
@@ -97,6 +98,7 @@ detection:
     mask_anomaly_start: true
 compute:
   n_workers: 0
+  start_method: auto
   chunk_size: 64
   checkpoint_every: 20000
   resume: true
@@ -107,3 +109,4 @@ output:
   write_efficiency: true
   write_plots: true
   confidence_level: 0.6827
+  colormap: viridis

@@ -13,13 +13,15 @@ import numpy as np
 from lenseff.survey import Survey
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
+    import pandas as pd
     from matplotlib.axes import Axes
     from matplotlib.figure import Figure
 
+    from lenseff.config import Config
     from lenseff.events import LightCurve
     from lenseff.inject import Injection
 
-__all__ = ["plot_injection", "plot_light_curve"]
+__all__ = ["plot_efficiency_map", "plot_efficiency_slices", "plot_injection", "plot_light_curve"]
 
 
 def _season_shading(ax: Axes, survey: Survey, t_min: float, t_max: float) -> None:
@@ -220,5 +222,167 @@ def plot_injection(
     bottom.set_xlabel("HJD")
     bottom.set_ylabel(r"residual [$\sigma$]")
     top.set_xlim(lo, hi)
+    figure.tight_layout()
+    return figure
+
+
+#: Contour levels drawn over the efficiency surface.  They are a second,
+#: non-colour encoding of the same magnitude, which is what keeps the figure
+#: readable in greyscale, in print, and to a colour-vision-deficient reader.
+EFFICIENCY_LEVELS: tuple[float, ...] = (0.1, 0.25, 0.5, 0.75, 0.9)
+
+
+def _surface_grid(surface: pd.DataFrame) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Reshape a per-cell table into ``(log_s, log_q, efficiency)`` arrays."""
+    log_q = np.sort(surface["log_q"].unique())
+    log_s = np.sort(surface["log_s"].unique())
+    grid = np.full((log_q.size, log_s.size), np.nan)
+    q_index = {value: i for i, value in enumerate(log_q)}
+    s_index = {value: i for i, value in enumerate(log_s)}
+    for row in surface.itertuples(index=False):
+        grid[q_index[row.log_q], s_index[row.log_s]] = row.efficiency
+    return log_s, log_q, grid
+
+
+def plot_efficiency_map(
+    surface: pd.DataFrame,
+    config: Config,
+    *,
+    ax: Axes | None = None,
+    title: str | None = None,
+) -> Figure:
+    """Plot the detection-efficiency surface in the ``(log s, log q)`` plane.
+
+    Magnitude is carried twice: by a perceptually uniform sequential colormap
+    and by labelled contour lines, so the figure survives greyscale printing
+    and colour-vision deficiency.
+
+    Args:
+        surface: Output of :func:`lenseff.efficiency.aggregate`.
+        config: The run configuration, for the colormap and the run label.
+        ax: Axis to draw on; a new figure is created when omitted.
+        title: Optional title.
+
+    Returns:
+        The figure.
+    """
+    import matplotlib.pyplot as plt
+
+    if ax is None:
+        _, ax = plt.subplots(figsize=(7.2, 5.4))
+    figure = cast("Figure", ax.get_figure())
+    log_s, log_q, grid = _surface_grid(surface)
+
+    mesh = ax.pcolormesh(
+        log_s,
+        log_q,
+        np.ma.masked_invalid(grid),
+        cmap=config.output.colormap,
+        vmin=0.0,
+        vmax=1.0,
+        shading="nearest",
+        rasterized=True,
+    )
+    if np.isfinite(grid).sum() > 3 and log_s.size > 1 and log_q.size > 1:
+        levels = [v for v in EFFICIENCY_LEVELS if np.nanmin(grid) < v < np.nanmax(grid)]
+        if levels:
+            contours = ax.contour(
+                log_s, log_q, grid, levels=levels, colors="white", linewidths=0.9, alpha=0.85
+            )
+            ax.clabel(contours, inline=True, fontsize=7, fmt="%.2f")
+
+    bar = figure.colorbar(mesh, ax=ax, pad=0.02)
+    bar.set_label("detection efficiency", fontsize="small")
+    bar.outline.set_visible(False)
+
+    ax.axvline(0.0, color="0.9", lw=0.8, ls=":", zorder=3)
+    ax.set_xlabel(r"$\log_{10}\, s$  (projected separation / $\theta_\mathrm{E}$)")
+    ax.set_ylabel(r"$\log_{10}\, q$  (planet / host mass ratio)")
+    n_trials = int(surface["n_trials"].sum())
+    ax.set_title(
+        title
+        if title is not None
+        else f"{config.run.name} [{config.short_hash()}] - {n_trials:,} injections",
+        fontsize="medium",
+    )
+    for spine in ("top", "right"):
+        ax.spines[spine].set_visible(False)
+    ax.tick_params(labelsize="small", color="0.6")
+    figure.tight_layout()
+    return figure
+
+
+def plot_efficiency_slices(
+    surface: pd.DataFrame,
+    config: Config,
+    *,
+    ax: Axes | None = None,
+    n_slices: int = 4,
+) -> Figure:
+    """Plot efficiency against ``log q`` for a few separations, with intervals.
+
+    Error bars are the Wilson score interval, which stays inside ``[0, 1]``
+    and stays finite at ``0`` and ``1`` detections -- where a Gaussian error
+    bar would be wrong or vanish.
+
+    Args:
+        surface: Output of :func:`lenseff.efficiency.aggregate`.
+        config: The run configuration.
+        ax: Axis to draw on; a new figure is created when omitted.
+        n_slices: How many separations to draw.  Kept small on purpose: each
+            series is direct-labelled as well as listed in the legend.
+
+    Returns:
+        The figure.
+    """
+    import matplotlib.pyplot as plt
+
+    if ax is None:
+        _, ax = plt.subplots(figsize=(7.2, 4.6))
+    figure = cast("Figure", ax.get_figure())
+
+    separations = np.sort(surface["log_s"].unique())
+    chosen = separations[
+        np.unique(np.linspace(0, separations.size - 1, min(n_slices, separations.size)).astype(int))
+    ]
+    colors = plt.get_cmap(config.output.colormap)(np.linspace(0.15, 0.85, len(chosen)))
+
+    for color, log_s in zip(colors, chosen, strict=True):
+        slice_ = surface[surface["log_s"] == log_s].sort_values("log_q")
+        label = f"$s$ = {10.0**log_s:.2f}"
+        ax.errorbar(
+            slice_["log_q"],
+            slice_["efficiency"],
+            yerr=[
+                slice_["efficiency"] - slice_["efficiency_low"],
+                slice_["efficiency_high"] - slice_["efficiency"],
+            ],
+            marker="o",
+            markersize=4.0,
+            lw=1.6,
+            capsize=2.0,
+            color=color,
+            label=label,
+        )
+        last = slice_.iloc[-1]
+        ax.annotate(
+            label,
+            (last["log_q"], last["efficiency"]),
+            textcoords="offset points",
+            xytext=(6, 0),
+            fontsize="x-small",
+            color="0.25",
+            va="center",
+        )
+
+    ax.set_xlabel(r"$\log_{10}\, q$")
+    ax.set_ylabel("detection efficiency")
+    ax.set_ylim(-0.02, 1.05)
+    ax.legend(loc="upper left", fontsize="x-small", frameon=False)
+    ax.grid(axis="y", color="0.9", lw=0.6)
+    ax.set_axisbelow(True)
+    for spine in ("top", "right"):
+        ax.spines[spine].set_visible(False)
+    ax.tick_params(labelsize="small", color="0.6")
     figure.tight_layout()
     return figure

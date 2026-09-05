@@ -65,9 +65,41 @@ jobs:
           cache-dependency-path: pyproject.toml
       - run: python -m pip install --upgrade pip
       - run: pip install -e ".[dev]"
-      # The six validation tests land in Phases 1-5; this job is the gate that
-      # keeps them green once they exist.  `-m validation` selects nothing yet,
-      # which pytest reports as exit code 5.
       - name: validation suite
+        run: pytest -q -m validation
+
+  demo:
+    name: end-to-end demo
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - run: python -m pip install --upgrade pip
+      - run: pip install -e ".[dev]"
+      # A reduced grid, so CI exercises the whole path -- sweep, checkpoint,
+      # aggregate, plot -- without spending the full demo budget.
+      - name: run a reduced demo end to end
         run: |
-          pytest -q -m validation || [ $? -eq 5 ]
+          python - <<'EOF'
+          import yaml, pathlib
+          config = yaml.safe_load(pathlib.Path("configs/roman_gbtds_demo.yaml").read_text())
+          config["run"]["name"] = "ci_demo"
+          config["run"]["output_dir"] = "results/ci_demo"
+          config["events"]["n_events"] = 2
+          config["injection"]["grid"].update({"n_alpha": 3})
+          config["injection"]["grid"]["log_q"]["n"] = 3
+          config["injection"]["grid"]["log_s"]["n"] = 3
+          config["injection"]["n_zero_q_trials"] = 10
+          pathlib.Path("configs/ci_demo.yaml").write_text(yaml.safe_dump(config, sort_keys=False))
+          EOF
+          lenseff run configs/ci_demo.yaml
+          test -f results/ci_demo/efficiency.parquet
+          test -f results/ci_demo/figures/efficiency_map.png
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ci-demo-efficiency
+          path: results/ci_demo/figures/

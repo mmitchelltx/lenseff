@@ -152,12 +152,26 @@ class EventSetup:
     f_blend: float
 
     @classmethod
-    def build(cls, event: Event, survey: Survey, config: Config) -> EventSetup:
-        """Precompute the planet-independent quantities for one event."""
+    def build(
+        cls, event: Event, survey: Survey, config: Config, realisation: int = 0
+    ) -> EventSetup:
+        """Precompute the planet-independent quantities for one event.
+
+        Args:
+            event: The baseline event.
+            survey: The realised calendar.
+            config: The run configuration.
+            realisation: Selects the noise draw.  Planet injections all use
+                realisation ``0`` so that the whole grid shares one noise
+                realisation per event; the ``q = 0`` controls use a distinct
+                realisation each, since otherwise every control on a given
+                event would be the same light curve and could not measure a
+                false-positive rate.
+        """
         magnification = pspl_magnification(
             event, survey.times, finite_source=config.injection.finite_source
         )
-        rng = generator(config.run.seed, "photometric_noise", event.index)
+        rng = generator(config.run.seed, "photometric_noise", event.index, realisation)
         f_source = float(survey.flux_from_mag(event.source_mag))
         return cls(
             event=event,

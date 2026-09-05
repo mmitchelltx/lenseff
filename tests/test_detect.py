@@ -166,7 +166,8 @@ def test_control_delta_chi2_is_never_positive(setup, survey, config):
     claim for the Delta chi-square criterion.
     """
     result = detect(inject_planet(setup, Planet(0.0, 1.0, 0.0), survey, config), survey, config)
-    assert result.delta_chi2 <= 0.0
+    # zero up to float64 rounding of a chi-square of order 1e4
+    assert result.delta_chi2 <= 1e-9 * result.chi2_binary
     # three extra free parameters buy a few units of chi-square, no more
     assert result.delta_chi2 > -30.0
     assert not result.detected
@@ -244,6 +245,7 @@ def test_optimisers_agree_on_the_minimum(demo_dict, setup, survey, method):
 def test_every_criterion_is_recorded_and_all_must_pass(setup, survey, config):
     result = detect(inject_planet(setup, Planet(1e-3, 1.3, 140.0), survey, config), survey, config)
     assert set(result.criteria) == {
+        "fittable",
         "delta_chi2",
         "consecutive_points",
         "points_in_anomaly",

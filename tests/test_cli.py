@@ -14,7 +14,8 @@ def test_validate_reports_the_hash(demo_config_path, capsys):
     out = capsys.readouterr().out
     assert "OK" in out
     assert "config hash" in out
-    assert "2,752" in out
+    assert "5,384" in out
+    assert "81 cells" in out
 
 
 def test_validate_rejects_a_bad_config(tmp_path, capsys):
@@ -40,9 +41,34 @@ def test_show_provenance(demo_config_path, capsys):
     assert payload["platform"]["python"]
 
 
-def test_run_is_not_implemented_yet(demo_config_path, capsys):
-    assert main(["run", str(demo_config_path)]) == 1
-    assert "Phase 6" in capsys.readouterr().err
+def test_run_executes_a_small_sweep(demo_dict, tmp_path, capsys):
+    import copy
+
+    import yaml
+
+    from lenseff.config import Config
+
+    data = copy.deepcopy(demo_dict)
+    data["run"].update({"name": "cli", "output_dir": str(tmp_path / "out")})
+    data["events"]["n_events"] = 1
+    data["injection"]["grid"].update(
+        {"log_q": {"min": -3.0, "max": -3.0, "n": 1}, "log_s": {"min": 0.0, "max": 0.0, "n": 1}}
+    )
+    data["injection"]["grid"]["n_alpha"] = 2
+    data["injection"]["n_zero_q_trials"] = 1
+    data["compute"]["n_workers"] = 1
+    path = tmp_path / "cli.yaml"
+    path.write_text(yaml.safe_dump(data), encoding="utf-8")
+
+    assert main(["run", str(path), "--quiet"]) == 0
+    out = capsys.readouterr().out
+    assert "efficiency" in out
+    assert "controls" in out
+    config = Config.from_yaml(path)
+    assert (tmp_path / "out" / "efficiency.parquet").exists()
+    assert (tmp_path / "out" / "figures" / "efficiency_map.png").exists()
+    assert (tmp_path / "out" / "figures" / "efficiency_slices.png").exists()
+    assert config.short_hash() in out
 
 
 def test_full_config_is_valid(capsys):
