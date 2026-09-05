@@ -86,7 +86,8 @@ ignore = [
 convention = "google"
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["D100", "D101", "D102", "D103", "D104", "ANN001", "ANN201", "ANN202", "ARG001", "N817"]
+"examples/*" = ["E402", "T201"]
+"tests/*" = ["D100", "D101", "D102", "D103", "D104", "ANN001", "ANN201", "ANN202", "ANN003", "ARG001", "N817"]
 
 [tool.pytest.ini_options]
 minversion = "8.0"

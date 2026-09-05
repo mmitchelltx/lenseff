@@ -675,22 +675,45 @@ class InjectionConfig:
     Attributes:
         grid: The parameter grid.
         finite_source: Whether to include finite-source effects (``rho``).
-        magnification_methods: MulensModel magnification method used near the
-            anomaly, e.g. ``"VBBL"``.
-        default_method: Magnification method used away from the anomaly.
-        method_window_t_E: Half-width, in Einstein times, of the window around
-            the anomaly where ``magnification_methods`` is applied.
+        binary_method: MulensModel method used where the source is close
+            enough to a caustic for the source size to matter.
+        point_source_method: MulensModel method used elsewhere in the
+            analysis window.
+        finite_source_radii: ``binary_method`` is applied wherever the source
+            centre lies within this many source radii of the caustic.  The
+            default is generous: the finite-source correction is already far
+            below the photometric precision at the boundary, so the switch
+            between methods introduces no visible step.
+        n_caustic_points: Points used to represent the caustic curve when
+            measuring the source-to-caustic distance.
+        analysis_window_t_E: Half-width, in Einstein times, of the data window
+            kept for injection and refitting.  Widened automatically when the
+            planetary caustic lies further out, which it does for very close
+            and very wide separations.
+        anomaly_sigma: The anomaly window spans the times at which the flux
+            difference between the binary and the baseline PSPL model exceeds
+            this many photometric sigma.  Defining the window by
+            detectability rather than by a fixed fractional deviation makes it
+            shrink appropriately for low-mass planets and faint sources, and
+            makes "did the anomaly land in a season gap" a sharp question.
+        anomaly_grid_points: Resolution of the dense grid on which the anomaly
+            window is located.  The window is found independently of the
+            observing cadence, so an anomaly that falls entirely inside a
+            season gap is still located and can be reported as unobserved.
         include_zero_q_control: Also run a ``q = 0`` (planet-free) control
-            batch, which measures the false-positive rate implied by the
-            detection threshold.
+            batch, which measures the false-positive rate of the criteria.
         n_zero_q_trials: Number of control injections.
     """
 
     grid: GridConfig
     finite_source: bool
-    magnification_methods: str
-    default_method: str
-    method_window_t_E: float
+    binary_method: str
+    point_source_method: str
+    finite_source_radii: float
+    n_caustic_points: int
+    analysis_window_t_E: float
+    anomaly_sigma: float
+    anomaly_grid_points: int
     include_zero_q_control: bool
     n_zero_q_trials: int
 
@@ -698,22 +721,21 @@ class InjectionConfig:
     def from_reader(cls, r: _Reader) -> InjectionConfig:
         """Parse an ``injection`` section."""
         grid_reader = r.require_section("grid")
-        finite_source = r.get_bool("finite_source", True)
-        methods = r.get_str("magnification_methods", "VBBL")
-        default_method = r.get_str("default_method", "point_source_point_lens")
-        window = r.get_float("method_window_t_E", 1.0, gt=0.0)
-        zero_q = r.get_bool("include_zero_q_control", True)
-        n_zero_q = r.get_int("n_zero_q_trials", 0, ge=0)
-        r.done()
-        return cls(
+        cfg = cls(
             grid=GridConfig.from_reader(grid_reader),
-            finite_source=finite_source,
-            magnification_methods=methods,
-            default_method=default_method,
-            method_window_t_E=window,
-            include_zero_q_control=zero_q,
-            n_zero_q_trials=n_zero_q,
+            finite_source=r.get_bool("finite_source", True),
+            binary_method=r.get_str("binary_method", "VBBL"),
+            point_source_method=r.get_str("point_source_method", "point_source"),
+            finite_source_radii=r.get_float("finite_source_radii", 20.0, gt=0.0),
+            n_caustic_points=r.get_int("n_caustic_points", 500, ge=10),
+            analysis_window_t_E=r.get_float("analysis_window_t_E", 3.0, gt=0.0),
+            anomaly_sigma=r.get_float("anomaly_sigma", 1.0, gt=0.0),
+            anomaly_grid_points=r.get_int("anomaly_grid_points", 2001, ge=101),
+            include_zero_q_control=r.get_bool("include_zero_q_control", True),
+            n_zero_q_trials=r.get_int("n_zero_q_trials", 0, ge=0),
         )
+        r.done()
+        return cfg
 
 
 # --------------------------------------------------------------------------

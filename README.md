@@ -28,8 +28,8 @@ class of code, and avoiding it is the reason this package exists.
 | phase | scope | state |
 | --- | --- | --- |
 | 0 | repo, packaging, CI, config schema + validation, provenance, RNG | **done** |
-| 1 | `survey.py`, `events.py` — Roman GBTDS calendar and error model | not started |
-| 2 | `inject.py` — planetary perturbation via MulensModel | not started |
+| 1 | `survey.py`, `events.py` — Roman GBTDS calendar and error model | **done** |
+| 2 | `inject.py` — planetary perturbation via MulensModel | **done** |
 | 3 | `detect.py` — multi-start PSPL refit and detection criteria | not started |
 | 4 | `grid.py` — parallel sweep, checkpointing, resume | not started |
 | 5 | `efficiency.py`, `plotting.py` — Wilson intervals, contour maps | not started |
@@ -54,9 +54,23 @@ own.
 ```bash
 lenseff validate configs/roman_gbtds_demo.yaml   # check a config before spending compute
 lenseff show configs/roman_gbtds_demo.yaml       # print the resolved config and its hash
-lenseff show --provenance configs/roman_gbtds_demo.yaml
+lenseff lightcurve configs/roman_gbtds_demo.yaml -o lc.png    # one event on the real calendar
 lenseff run configs/roman_gbtds_demo.yaml        # Phase 6
 ```
+
+### Anomaly morphologies
+
+`python examples/anomaly_gallery.py` renders the textbook cases and is the
+visual check that the injection is doing what it claims:
+
+![anomaly gallery](docs/figures/anomaly_gallery.png)
+
+Top left, a **major-image** perturbation (`s > 1`): a single sharp positive
+spike. Top right, a **minor-image** perturbation (`s < 1`): the characteristic
+demagnification dip immediately before the caustic spike. Bottom left, a
+**central-caustic** perturbation on a high-magnification event, sitting on the
+peak itself. Bottom right, `q = 1e-5`, short and weak — the regime where an
+under-fitted PSPL refit would most badly inflate the efficiency.
 
 ## Detection criteria
 

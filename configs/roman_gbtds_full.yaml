@@ -56,9 +56,13 @@ injection:
     alpha_mode: stratified
     events_per_cell: 0
   finite_source: true
-  magnification_methods: VBBL
-  default_method: point_source_point_lens
-  method_window_t_E: 1.0
+  binary_method: VBBL              # finite-source binary, used near caustics
+  point_source_method: point_source  # binary point source, used elsewhere
+  finite_source_radii: 20.0        # VBBL within this many source radii of a caustic
+  n_caustic_points: 500
+  analysis_window_t_E: 3.0         # widened automatically for close/wide caustics
+  anomaly_sigma: 1.0               # anomaly window = where |Delta flux| > this many sigma
+  anomaly_grid_points: 2001
   include_zero_q_control: true
   n_zero_q_trials: 20000
 detection:

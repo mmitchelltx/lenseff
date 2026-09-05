@@ -105,9 +105,13 @@ t_E: { dist: lognormal, median: 25.0, sigma_ln: 0.6, truncate_min: 1.0, truncate
 | `grid.alpha_mode` | `stratified` \| `random` \| `uniform` | `stratified` | one angle per equal bin of [0°, 360°) is unbiased with lower variance |
 | `grid.events_per_cell` | int ≥ 0 | `0` | `0` uses the whole event sample |
 | `finite_source` | bool | `true` | include ρ |
-| `magnification_methods` | str | `VBBL` | MulensModel method near the anomaly |
-| `default_method` | str | `point_source_point_lens` | method away from it |
-| `method_window_t_E` | float > 0 | `1.0` | half-width of the accurate-method window, in t_E |
+| `binary_method` | str | `VBBL` | finite-source method, used near caustics |
+| `point_source_method` | str | `point_source` | binary point-source method, used elsewhere |
+| `finite_source_radii` | float > 0 | `20.0` | apply `binary_method` within this many source radii of the caustic |
+| `n_caustic_points` | int ≥ 10 | `500` | resolution of the caustic curve |
+| `analysis_window_t_E` | float > 0 | `3.0` | half-width of the retained data window, widened automatically to reach the planetary caustic |
+| `anomaly_sigma` | float > 0 | `1.0` | anomaly window = where the model flux difference exceeds this many σ |
+| `anomaly_grid_points` | int ≥ 101 | `2001` | resolution of the cadence-independent grid used to locate the anomaly |
 | `include_zero_q_control` | bool | `true` | run planet-free controls |
 | `n_zero_q_trials` | int ≥ 0 | `0` | how many; measures the false-positive rate |
 
