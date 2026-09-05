@@ -74,8 +74,14 @@ detection:
   max_gap_within_run_days: 0.25
   min_points_in_anomaly: 1
   refit:
-    n_starts: 12
-    method: Nelder-Mead
+    n_starts: 28              # candidate starts, screened cheaply by chi-square
+    n_refine: 4               # best candidates actually handed to the optimiser
+    method: least_squares
+    require_positive_source: true
+    t_0_bound_t_E: 2.0        # generous box; exists only to keep t_E away from 0
+    t_E_bound_factor: 20.0
+    u_0_bound_max: 3.0
+    u_0_bound_min: 1.0e-5
     max_iterations: 5000
     tolerance: 1.0e-06
     free_blending: true

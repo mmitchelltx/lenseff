@@ -23,6 +23,18 @@ anomaly, so comparing against the *injected* PSPL parameters instead of a refit
 substantially overestimates efficiency. That is the most common error in this
 class of code, and avoiding it is the reason this package exists.
 
+How much it matters, measured on this code (`test_the_refit_reabsorbs_part_of_the_anomaly`):
+
+| injected planet | Δχ² vs refit | Δχ² vs injected PSPL | inflation |
+| --- | ---: | ---: | ---: |
+| `q=1e-2, s=1.3` (strong) | 6,045,924 | 6,444,352 | ×1.07 |
+| `q=1e-3, s=1.3` | 1,687,523 | 1,691,515 | ×1.00 |
+| `q=1e-4, s=1.0` | 50 | 82 | ×1.6 |
+| `q=1e-3, s=0.6` (marginal) | 28 | 109 | **×3.9** |
+
+The error is negligible for anomalies nobody would miss, and largest exactly in
+the marginal regime that decides where the efficiency contour falls.
+
 ## Status
 
 | phase | scope | state |
@@ -30,7 +42,7 @@ class of code, and avoiding it is the reason this package exists.
 | 0 | repo, packaging, CI, config schema + validation, provenance, RNG | **done** |
 | 1 | `survey.py`, `events.py` — Roman GBTDS calendar and error model | **done** |
 | 2 | `inject.py` — planetary perturbation via MulensModel | **done** |
-| 3 | `detect.py` — multi-start PSPL refit and detection criteria | not started |
+| 3 | `detect.py` — multi-start PSPL refit and detection criteria | **done** |
 | 4 | `grid.py` — parallel sweep, checkpointing, resume | not started |
 | 5 | `efficiency.py`, `plotting.py` — Wilson intervals, contour maps | not started |
 | 6 | CLI `run`, docs, tutorial notebook | not started |

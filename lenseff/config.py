@@ -753,9 +753,24 @@ class RefitConfig:
     failure mode this package exists to avoid.
 
     Attributes:
-        n_starts: Number of multi-start initialisations.
-        method: ``scipy.optimize.minimize`` method for the non-linear
-            parameters.
+        n_starts: Number of candidate starting points screened by evaluating
+            chi-square at each.  Screening is cheap: one magnification
+            evaluation per candidate.
+        n_refine: How many of the best-scoring candidates are handed to the
+            optimiser.  This is the knob that trades robustness against
+            compute; the screen makes a large ``n_starts`` nearly free, so
+            widen that before raising this.
+        method: Optimiser for the non-linear parameters.  ``least_squares``
+            uses the residual vector directly and is several times faster than
+            the simplex methods at equal accuracy.
+        require_positive_source: Clamp a negative fitted source flux to zero.
+            Negative *blend* flux is always allowed, as is standard.
+        t_0_bound_t_E: Half-width, in Einstein times, of the box the fitted
+            ``t_0`` may move in.
+        t_E_bound_factor: The fitted ``t_E`` is confined to the truth divided
+            and multiplied by this factor.
+        u_0_bound_max: Upper bound on the fitted impact parameter.
+        u_0_bound_min: Lower bound on the fitted impact parameter.
         max_iterations: Iteration cap per start.
         tolerance: Convergence tolerance passed to the optimiser.
         free_blending: Fit ``f_s`` and ``f_b`` (linearly, at fixed non-linear
@@ -770,7 +785,13 @@ class RefitConfig:
     """
 
     n_starts: int
+    n_refine: int
     method: str
+    require_positive_source: bool
+    t_0_bound_t_E: float
+    t_E_bound_factor: float
+    u_0_bound_max: float
+    u_0_bound_min: float
     max_iterations: int
     tolerance: float
     free_blending: bool
@@ -783,10 +804,18 @@ class RefitConfig:
     def from_reader(cls, r: _Reader) -> RefitConfig:
         """Parse a ``detection.refit`` section."""
         cfg = cls(
-            n_starts=r.get_int("n_starts", 12, ge=1),
+            n_starts=r.get_int("n_starts", 28, ge=1),
+            n_refine=r.get_int("n_refine", 4, ge=1),
             method=r.get_str(
-                "method", "Nelder-Mead", choices=("Nelder-Mead", "Powell", "L-BFGS-B")
+                "method",
+                "least_squares",
+                choices=("least_squares", "Nelder-Mead", "Powell", "L-BFGS-B"),
             ),
+            require_positive_source=r.get_bool("require_positive_source", True),
+            t_0_bound_t_E=r.get_float("t_0_bound_t_E", 2.0, gt=0.0),
+            t_E_bound_factor=r.get_float("t_E_bound_factor", 20.0, gt=1.0),
+            u_0_bound_max=r.get_float("u_0_bound_max", 3.0, gt=0.0),
+            u_0_bound_min=r.get_float("u_0_bound_min", 1e-5, gt=0.0),
             max_iterations=r.get_int("max_iterations", 5000, ge=1),
             tolerance=r.get_float("tolerance", 1e-6, gt=0.0),
             free_blending=r.get_bool("free_blending", True),

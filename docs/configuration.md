@@ -133,8 +133,10 @@ See [`detection-criteria.md`](detection-criteria.md).
 
 | key | type | default | meaning |
 | --- | --- | --- | --- |
-| `n_starts` | int ≥ 1 | `12` | multi-start initialisations |
-| `method` | `Nelder-Mead` \| `Powell` \| `L-BFGS-B` | `Nelder-Mead` | optimiser for the non-linear parameters |
+| `n_starts` | int ≥ 1 | `28` | candidate starts, screened by one chi-square evaluation each |
+| `n_refine` | int ≥ 1 | `4` | best candidates handed to the optimiser |
+| `method` | `least_squares` \| `Nelder-Mead` \| `Powell` \| `L-BFGS-B` | `least_squares` | optimiser for the non-linear parameters |
+| `require_positive_source` | bool | `true` | clamp a negative fitted source flux to zero |
 | `max_iterations` | int ≥ 1 | `5000` | iteration cap per start |
 | `tolerance` | float > 0 | `1e-6` | convergence tolerance |
 | `free_blending` | bool | `true` | fit `f_s`, `f_b` linearly at fixed non-linear parameters |
