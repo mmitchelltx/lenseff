@@ -1,0 +1,29 @@
+cff-version: 1.2.0
+message: If you use lenseff in your research, please cite it as below.
+title: "lenseff: detection efficiency for planetary microlensing surveys"
+abstract: >-
+  lenseff computes detection efficiency for planetary microlensing surveys by
+  injection-recovery. It injects binary-lens perturbations into single-lens
+  light curves on a survey's real observing calendar, scores them against a
+  freely refitted point-source point-lens model, and aggregates the recoveries
+  into an efficiency surface in the (log q, log s) plane with binomial
+  confidence intervals.
+type: software
+authors:
+  # TODO before release: add orcid, and replace the affiliation if applicable.
+  - family-names: Mitchell
+    given-names: Marcus
+    affiliation: Independent researcher
+repository-code: https://github.com/mmitchelltx/lenseff
+url: https://github.com/mmitchelltx/lenseff
+license: MIT
+version: 0.1.0
+# TODO before release: set the release date, and add the Zenodo DOI once the
+# first GitHub release has been archived. See docs/releasing.md.
+date-released: 2026-09-06
+keywords:
+  - astronomy
+  - exoplanets
+  - gravitational microlensing
+  - detection efficiency
+  - Nancy Grace Roman Space Telescope

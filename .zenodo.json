@@ -1,0 +1,29 @@
+{
+  "title": "lenseff: detection efficiency for planetary microlensing surveys",
+  "description": "<p><code>lenseff</code> computes detection efficiency for planetary microlensing surveys by injection-recovery. It generates single-lens light curves on a survey's real observing calendar, injects binary-lens perturbations across a grid in (log q, log s) while marginalising over trajectory angle and event population, scores each against a <em>freely refitted</em> point-source point-lens model, and aggregates the recoveries into an efficiency surface with Wilson score confidence intervals.</p><p>All magnification calculations are delegated to MulensModel. Runs are reproducible by construction: every random draw is addressed by a stable key path rather than drawn from a running sequence, so results do not depend on worker count or task order, and every output file embeds the resolved configuration, its SHA-256 hash, the seed, the git commit and all dependency versions.</p>",
+  "upload_type": "software",
+  "access_right": "open",
+  "license": "mit",
+  "creators": [
+    {
+      "name": "Mitchell, Marcus",
+      "affiliation": "Independent researcher"
+    }
+  ],
+  "keywords": [
+    "astronomy",
+    "exoplanets",
+    "gravitational microlensing",
+    "detection efficiency",
+    "injection-recovery",
+    "Nancy Grace Roman Space Telescope",
+    "Python"
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "https://github.com/mmitchelltx/lenseff",
+      "relation": "isSupplementTo",
+      "scheme": "url"
+    }
+  ]
+}

@@ -1,0 +1,121 @@
+# lenseff demo configuration -- Roman Galactic Bulge Time Domain Survey.
+#
+# Small enough to finish on a laptop.  Every number below is explicit on
+# purpose: `lenseff show config.yaml` prints exactly this tree (with preset
+# values merged in), and its SHA-256 is what gets stamped into the output.
+#
+# NOTE: values marked [PROVISIONAL] are Phase 1 sign-off items.
+
+run:
+  name: roman_gbtds_demo
+  seed: 20260905
+  output_dir: results/roman_gbtds_demo
+  overwrite: false
+
+survey:
+  # Pulls cadence, season layout and the W149 error model from
+  # lenseff/presets.py.  Anything set here overrides the preset key by key.
+  preset: roman_gbtds
+  # Uncomment to shorten the calendar for quick tests:
+  # seasons:
+  #   start_offsets_days: [0.0, 182.625]
+  precision_scale: 1.0      # multiplies every sigma; 0.5 == twice as precise
+  dropout_fraction: 0.0     # fraction of scheduled visits randomly discarded
+
+events:
+  source: population
+  n_events: 8               # baseline PSPL events shared across the grid
+  require_peak_in_season: true
+  peak_window_t_E: 2.0
+  min_points_near_peak: 200
+  distributions:
+    # t_0 is omitted: the default is uniform over the union of season windows,
+    # which is the right prior once require_peak_in_season is set.
+    u_0:
+      dist: uniform
+      min: 0.0
+      max: 1.0
+    t_E:                                    # [PROVISIONAL] bulge t_E prior
+      dist: lognormal
+      median: 25.0
+      sigma_ln: 0.6
+      truncate_min: 1.0
+      truncate_max: 300.0
+    source_mag:                             # [PROVISIONAL] W149 source mags
+      dist: uniform
+      min: 20.0
+      max: 23.0
+    blend_ratio:                            # f_b / f_s
+      dist: uniform
+      min: 0.0
+      max: 1.0
+    rho:                                    # [PROVISIONAL] source size in theta_E
+      dist: loguniform
+      min: 3.0e-4
+      max: 3.0e-3
+
+injection:
+  grid:
+    log_q:
+      min: -5.0
+      max: -2.0
+      n: 9
+    log_s:
+      min: -0.6
+      max: 0.6
+      n: 9
+    n_alpha: 8
+    alpha_mode: stratified    # one angle per equal bin of [0, 360)
+    events_per_cell: 0        # 0 == use every event in the sample
+  finite_source: true
+  binary_method: VBBL              # finite-source binary, used near caustics
+  point_source_method: point_source  # binary point source, used elsewhere
+  finite_source_radii: 20.0        # VBBL within this many source radii of a caustic
+  n_caustic_points: 500
+  analysis_window_t_E: 3.0         # widened automatically for close/wide caustics
+  anomaly_sigma: 1.0               # anomaly window = where |Delta flux| > this many sigma
+  anomaly_grid_points: 2001
+  include_zero_q_control: true
+  n_zero_q_trials: 200        # measures the false-positive rate of the criteria
+
+detection:
+  delta_chi2_min: 160.0       # chi2(free PSPL refit) - chi2(binary)
+  consecutive_points: 3
+  point_sigma: 3.0
+  require_same_sign: true
+  require_in_season: true
+  max_gap_within_run_days: 0.25
+  min_points_in_anomaly: 1
+  min_points_to_fit: 20     # below this the window holds no data to fit (long gap)
+  refit:
+    n_starts: 28              # candidate starts, screened cheaply by chi-square
+    n_refine: 4               # best candidates actually handed to the optimiser
+    method: least_squares
+    require_positive_source: true
+    t_0_bound_t_E: 2.0        # generous box; exists only to keep t_E away from 0
+    t_E_bound_factor: 20.0
+    u_0_bound_max: 3.0
+    u_0_bound_min: 1.0e-5
+    max_iterations: 5000
+    tolerance: 1.0e-6
+    free_blending: true
+    t_0_jitter_t_E: 0.3
+    t_E_factors: [0.7, 1.0, 1.4]
+    u_0_factors: [0.6, 1.0, 1.6]
+    mask_anomaly_start: true
+
+compute:
+  n_workers: 0                # 0 == one per CPU
+  start_method: auto          # 'fork' where available; see docs/configuration.md
+  chunk_size: 4              # tasks per dispatch; a task is one (event, cell)
+  checkpoint_every: 2000
+  resume: true
+  max_records_in_memory: 200000
+
+output:
+  compression: snappy
+  write_injections: true
+  write_efficiency: true
+  write_plots: true
+  confidence_level: 0.6827    # 1-sigma Wilson score interval
+  colormap: viridis           # perceptually uniform; never a rainbow map
