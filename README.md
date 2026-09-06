@@ -1,5 +1,12 @@
 # lenseff
 
+[![CI](https://github.com/mmitchelltx/lenseff/actions/workflows/ci.yml/badge.svg)](https://github.com/mmitchelltx/lenseff/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
+<!-- Add after the first Zenodo-archived release; see docs/releasing.md:
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.XXXXXXX.svg)](https://doi.org/10.5281/zenodo.XXXXXXX)
+-->
+
 Detection efficiency for planetary microlensing surveys, by injection-recovery.
 
 `lenseff` injects binary-lens (planetary) perturbations into single-lens light
@@ -168,7 +175,23 @@ and the levers worth pulling.
 * [`docs/detection-criteria.md`](docs/detection-criteria.md) — criteria, rationale, decisions.
 * [`docs/compute-budget.md`](docs/compute-budget.md) — cost per injection and grid sizing.
 * [`docs/reproducing.md`](docs/reproducing.md) — reproducing a published map.
+* [`docs/releasing.md`](docs/releasing.md) — releasing, Zenodo archiving, JOSS submission.
 * [`docs/tutorial.ipynb`](docs/tutorial.ipynb) — the whole pipeline, end to end.
+* [`CONTRIBUTING.md`](CONTRIBUTING.md) — development setup and what a good change looks like.
+
+## Citing lenseff
+
+A paper describing `lenseff` is in [`paper/`](paper/paper.md), prepared for
+submission to the Journal of Open Source Software. Until it is published, cite
+the software directly — [`CITATION.cff`](CITATION.cff) is machine-readable and
+GitHub renders a "Cite this repository" button from it. Once the first release
+is archived on Zenodo, cite the concept DOI, which always resolves to the
+newest version.
+
+Please also cite [MulensModel](https://doi.org/10.1016/j.ascom.2018.11.001)
+(Poleski & Yee 2019), which performs every magnification calculation, and
+[VBBinaryLensing](https://doi.org/10.1093/mnras/sty1791) (Bozza et al. 2018),
+which it uses for finite-source binary magnification.
 
 ## Known limitations
 
